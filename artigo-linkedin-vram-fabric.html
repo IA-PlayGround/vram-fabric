@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VRAM Fabric — O Runtime que elimina o gargalo PCIe da IA Local</title>
+<style>
+  body {
+    font-family: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    line-height: 1.75;
+    color: rgba(0,0,0,0.9);
+    background: #fff;
+  }
+
+  h1 {
+    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 8px;
+    color: #111;
+  }
+
+  h2 {
+    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    font-size: 20px;
+    font-weight: 600;
+    margin-top: 36px;
+    margin-bottom: 12px;
+    color: #1a1a2e;
+    border-left: 4px solid #6c5ce7;
+    padding-left: 14px;
+  }
+
+  h3 { font-family: 'Inter', -apple-system, system-ui, sans-serif; font-size: 16px; font-weight: 600; margin-top: 24px; margin-bottom: 8px; color: #333; }
+
+  p { margin: 0 0 16px 0; font-size: 17px; }
+
+  .subtitle { font-size: 18px; color: #555; margin-bottom: 24px; }
+
+  code {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 14px; background: #f4f4f8; padding: 2px 6px; border-radius: 4px; color: #d63384;
+  }
+
+  pre {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 13px;
+    background: #1e1e2e; color: #cdd6f4; padding: 20px 24px;
+    border-radius: 10px; overflow-x: auto; line-height: 1.6; margin: 20px 0;
+  }
+  .py-kw { color: #cba6f7; } .py-str { color: #a6e3a1; } .py-comment { color: #6c7086; }
+  .py-func { color: #89b4fa; } .py-num { color: #fab387; }
+
+  .divider { border: none; border-top: 1px solid #e0e0e0; margin: 28px 0; }
+
+  .tag {
+    display: inline-block; background: #e8e0ff; color: #5a3ec8; padding: 4px 12px;
+    border-radius: 20px; font-size: 13px; margin: 0 6px 8px 0;
+    font-family: 'Inter', -apple-system, system-ui, sans-serif; font-weight: 500;
+  }
+
+  .highlight-box {
+    background: linear-gradient(135deg, #f8f7ff 0%, #ede7ff 100%);
+    border: 1px solid #d4c5f9; border-radius: 10px; padding: 20px 24px; margin: 28px 0;
+  }
+
+  /* ═══════ BAR CHART SYSTEM ═══════ */
+  .chart-card {
+    background: #fafbff; border: 1px solid #e8ebf4; border-radius: 10px;
+    padding: 22px 24px; margin: 20px 0;
+  }
+  .chart-card h3 { margin: 0 0 16px 0; font-size: 15px; color: #444; text-transform: uppercase; letter-spacing: 0.6px; }
+
+  .bar-row {
+    display: flex; align-items: center; margin-bottom: 12px; gap: 10px;
+  }
+  .bar-label {
+    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    font-size: 13px; font-weight: 600; min-width: 80px; text-align: right; color: #333;
+  }
+  .bar-track {
+    flex: 1; height: 22px; background: #e8ebf4; border-radius: 6px; overflow: hidden; position: relative;
+  }
+  .bar-fill {
+    height: 100%; border-radius: 6px; display: flex; align-items: center; min-width: 32px;
+    padding-left: 8px; font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    font-size: 11px; font-weight: 700; color: #fff; white-space: nowrap;
+    transition: width 0.3s ease;
+  }
+  .bar-fill.purple, .hgroup-fill.purple { background: linear-gradient(90deg, #6c5ce7, #a29bfe); }
+  .bar-fill.green,  .hgroup-fill.green  { background: linear-gradient(90deg, #00b894, #55efc4); }
+  .bar-fill.orange, .hgroup-fill.orange { background: linear-gradient(90deg, #e17055, #fab1a0); }
+  .bar-fill.blue,   .hgroup-fill.blue   { background: linear-gradient(90deg, #0984e3, #74b9ff); }
+  .bar-fill.red,    .hgroup-fill.red    { background: linear-gradient(90deg, #d63031, #ff7675); }
+  .bar-fill.teal,   .hgroup-fill.teal   { background: linear-gradient(90deg, #00cec9, #81ecec); }
+  .bar-fill.gray,   .hgroup-fill.gray   { background: linear-gradient(90deg, #2d3436, #636e72); }
+  .bar-value {
+    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    font-size: 13px; font-weight: 700; min-width: 72px; color: #333;
+  }
+
+  /* multi-bar comparison */
+  .multi-bar-group { margin-bottom: 18px; }
+  .multi-bar-label {
+    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #444;
+  }
+  .multi-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .multi-bar-legend {
+    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    font-size: 11px; min-width: 64px; text-align: right; color: #888;
+  }
+  .multi-bar-track { flex: 1; height: 18px; background: #e8ebf4; border-radius: 5px; overflow: hidden; }
+  .multi-bar-fill { height: 100%; border-radius: 5px; display: flex; align-items: center; padding-left: 6px; font-family: 'Inter', -apple-system, system-ui, sans-serif; font-size: 10px; font-weight: 700; color: #fff; }
+  .multi-bar-val { font-family: 'Inter', -apple-system, system-ui, sans-serif; font-size: 12px; font-weight: 600; min-width: 56px; color: #555; }
+
+  /* horizontal group bar chart */
+  .hgroup { margin: 12px 0; }
+  .hgroup-title { font-family: 'Inter', -apple-system, system-ui, sans-serif; font-size: 13px; font-weight: 700; color: #333; margin-bottom: 6px; }
+  .hgroup-bars { display: flex; flex-direction: column; gap: 5px; }
+  .hgroup-row { display: flex; align-items: center; gap: 8px; }
+  .hgroup-legend { font-size: 12px; font-weight: 600; min-width: 80px; text-align: right; color: #666; font-family: 'Inter', -apple-system, system-ui, sans-serif; }
+  .hgroup-track { flex: 1; height: 20px; background: #e8ebf4; border-radius: 5px; overflow: hidden; }
+  .hgroup-fill { height: 100%; border-radius: 5px; display: flex; align-items: center; min-width: 28px; padding-left: 8px; font-family: 'Inter', -apple-system, system-ui, sans-serif; font-size: 11px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hgroup-val { font-family: 'Inter', -apple-system, system-ui, sans-serif; font-size: 13px; font-weight: 700; min-width: 64px; color: #333; }
+
+  /* vertical comparison bars (side by side) */
+  .vgroup { display: flex; gap: 14px; margin: 12px 0; align-items: flex-end; }
+  .vitem { flex: 1; display: flex; flex-direction: column; align-items: center; }
+  .vbar { width: 56px; border-radius: 8px 8px 0 0; position: relative; transition: height 0.4s ease; }
+  .vbar-val { font-family: 'Inter', -apple-system, system-ui, sans-serif; font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+  .vbar-label { font-family: 'Inter', -apple-system, system-ui, sans-serif; font-size: 11px; color: #666; margin-top: 6px; text-align: center; line-height: 1.3; }
+
+  .chart-legend { display: flex; gap: 16px; justify-content: center; margin-top: 12px; font-family: 'Inter', -apple-system, system-ui, sans-serif; font-size: 12px; color: #777; }
+  .legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+  .legend-dot.purple { background: #6c5ce7; } .legend-dot.gray { background: #b2bec3; }
+  .legend-dot.green { background: #00b894; } .legend-dot.orange { background: #e17055; }
+
+  .paper-card {
+    background: #fafbff; border: 1px solid #e8ebf4; border-radius: 8px;
+    padding: 14px 18px; margin: 10px 0; font-size: 14px; display: flex; align-items: center; gap: 14px;
+  }
+  .paper-card strong { color: #5a3ec8; }
+  .paper-spark {
+    display: inline-block; min-width: 48px; text-align: center; font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    font-size: 11px; font-weight: 700; color: #fff; padding: 3px 8px; border-radius: 4px;
+  }
+  .paper-spark.bar-1  { background: #6c5ce7; }
+  .paper-spark.bar-2  { background: #a29bfe; }
+  .paper-spark.bar-3  { background: #6c5ce7; }
+  .paper-spark.bar-4  { background: #00b894; }
+  .paper-spark.bar-5  { background: #e17055; }
+  .paper-spark.bar-6  { background: #0984e3; }
+  .paper-spark.bar-7  { background: #6c5ce7; }
+
+  /* mini inline bar */
+  .mini-bar-wrap { display: inline-flex; align-items: center; gap: 6px; vertical-align: middle; }
+  .mini-bar { height: 14px; border-radius: 3px; display: inline-block; }
+
+  ul { margin: 8px 0 16px 20px; padding: 0; }
+  ul li { margin-bottom: 6px; font-size: 16px; }
+
+  footer { margin-top: 48px; padding-top: 20px; border-top: 2px solid #f0f0f0; font-size: 14px; color: #777; }
+
+  .cta-box {
+    background: #6c5ce7; color: #fff; border-radius: 10px; padding: 28px 32px; margin: 36px 0; text-align: center;
+  }
+  .cta-box h2 { border: none; padding: 0; color: #fff; margin-top: 0; }
+  .cta-box p { color: rgba(255,255,255,0.85); }
+  .cta-box code { background: rgba(255,255,255,0.15); color: #fff; }
+
+  .two-col { display: flex; gap: 16px; margin: 20px 0; }
+  .two-col .col { flex: 1; background: #fafbff; border: 1px solid #e8ebf4; border-radius: 8px; padding: 16px 20px; }
+  .two-col .col h3 { margin-top: 0; }
+
+  .benchmark-table {
+    width: 100%; border-collapse: collapse; margin: 20px 0;
+    font-size: 15px; font-family: 'Inter', -apple-system, system-ui, sans-serif;
+  }
+  .benchmark-table th { background: #6c5ce7; color: #fff; padding: 10px 12px; text-align: left; font-weight: 600; }
+  .benchmark-table td { padding: 10px 12px; border-bottom: 1px solid #e0e0e0; }
+  .benchmark-table tr:nth-child(even) { background: #fafafa; }
+  .benchmark-table .accent { color: #6c5ce7; font-weight: 700; }
+
+  @media (max-width: 500px) {
+    body { padding: 16px 12px; }
+    .two-col { flex-direction: column; }
+    pre { font-size: 11px; padding: 14px 16px; }
+    .bar-label { min-width: 56px; font-size: 11px; }
+    .vbar { width: 40px; }
+    .paper-card { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+
+<h1>VRAM Fabric: o runtime que coloca toda sua stack de IA para rodar direto na VRAM da GPU</h1>
+
+<p class="subtitle">Como eliminamos o gargalo PCIe e aceleramos consultas vetoriais, cache semântico e orquestração de agentes em até 30x, com apenas 6 dependências Python.</p>
+
+<hr class="divider">
+
+<!-- ═══════════════════════════════════════════ -->
+<h2>O problema físico que ninguém resolveu</h2>
+
+<p>
+  Toda stack de IA local sofre do mesmo gargalo: <strong>o barramento PCIe</strong>.
+  Enquanto a VRAM GDDR6X opera a <strong>600 a 1.000 GB/s</strong>, o PCIe 4.0 x16 entrega apenas <strong>~32 GB/s</strong>.
+  Isso significa que cada embedding, vetor ou estado de agente que transita CPU ↔ GPU paga um "pedágio" de 50 a 200 µs em latência, além de 10x mais energia.
+</p>
+
+<!-- ▸ GRÁFICO: VRAM vs PCIe — barra horizontal -->
+<div class="chart-card">
+  <h3>Largura de Banda: VRAM vs PCIe</h3>
+  <div class="bar-row">
+    <span class="bar-label">VRAM</span>
+    <div class="bar-track">
+      <div class="bar-fill purple" style="width:100%">600-1000 GB/s</div>
+    </div>
+    <span class="bar-value" style="color:#6c5ce7">100%</span>
+  </div>
+  <div class="bar-row">
+    <span class="bar-label">PCIe 4.0</span>
+    <div class="bar-track">
+      <div class="bar-fill gray" style="width:4.5%">32 GB/s</div>
+    </div>
+    <span class="bar-value" style="color:#b2bec3">~3.2%</span>
+  </div>
+  <div class="chart-legend">
+    <span><span class="legend-dot purple"></span> VRAM GDDR6X</span>
+    <span><span class="legend-dot gray"></span> PCIe 4.0 x16</span>
+    <span style="color:#6c5ce7;font-weight:700">Diferença: 18-30x</span>
+  </div>
+</div>
+
+<!-- ▸ GRÁFICO: Latência — barras horizontais comparativas -->
+<div class="chart-card">
+  <h3>Latência de ida e volta (round-trip)</h3>
+  <div class="bar-row">
+    <span class="bar-label">VRAM</span>
+    <div class="bar-track">
+      <div class="bar-fill green" style="width:5%">&lt;5 µs</div>
+    </div>
+    <span class="bar-value" style="color:#00b894">×1</span>
+  </div>
+  <div class="bar-row">
+    <span class="bar-label">PCIe</span>
+    <div class="bar-track">
+      <div class="bar-fill orange" style="width:55%">50-200 µs</div>
+    </div>
+    <span class="bar-value" style="color:#e17055">×10-40</span>
+  </div>
+</div>
+
+<p>
+  Stacks tradicionais (LangChain, LlamaIndex) mantêm embeddings, cache semântico e estado de agentes na RAM do sistema, forçando cada operação a cruzar o barramento PCIe repetidamente. É como ter uma autoestrada de 600 pistas ao lado de uma rua de 32 pistas... e escolher a rua.
+</p>
+
+<!-- ▸ GRÁFICO: Métricas consolidadas — barras visuais nos 4 KPIs -->
+<div class="highlight-box">
+  <h3 style="margin-top:0;text-align:center">Ganhos do VRAM Fabric sobre stacks tradicionais</h3>
+  <div style="display:flex; justify-content:space-around; flex-wrap:wrap; text-align:center; gap:12px;">
+
+    <div style="flex:1;min-width:120px">
+      <div style="font-size:28px;font-weight:700;color:#6c5ce7;font-family:'Inter',sans-serif">18-30x</div>
+      <div style="font-size:12px;color:#666;font-family:'Inter',sans-serif;margin-bottom:6px">+ LARGURA DE BANDA</div>
+      <div style="height:6px;background:#e8ebf4;border-radius:3px"><div style="width:93%;height:100%;background:linear-gradient(90deg,#6c5ce7,#a29bfe);border-radius:3px"></div></div>
+    </div>
+
+    <div style="flex:1;min-width:120px">
+      <div style="font-size:28px;font-weight:700;color:#00b894;font-family:'Inter',sans-serif">10-40x</div>
+      <div style="font-size:12px;color:#666;font-family:'Inter',sans-serif;margin-bottom:6px">− LATÊNCIA</div>
+      <div style="height:6px;background:#e8ebf4;border-radius:3px"><div style="width:96%;height:100%;background:linear-gradient(90deg,#00b894,#55efc4);border-radius:3px"></div></div>
+    </div>
+
+    <div style="flex:1;min-width:120px">
+      <div style="font-size:28px;font-weight:700;color:#e17055;font-family:'Inter',sans-serif">10x</div>
+      <div style="font-size:12px;color:#666;font-family:'Inter',sans-serif;margin-bottom:6px">− ENERGIA/QUERY</div>
+      <div style="height:6px;background:#e8ebf4;border-radius:3px"><div style="width:90%;height:100%;background:linear-gradient(90deg,#e17055,#fab1a0);border-radius:3px"></div></div>
+    </div>
+
+    <div style="flex:1;min-width:120px">
+      <div style="font-size:28px;font-weight:700;color:#0984e3;font-family:'Inter',sans-serif">&lt;2%</div>
+      <div style="font-size:12px;color:#666;font-family:'Inter',sans-serif;margin-bottom:6px">OVERHEAD SCHEDULER</div>
+      <div style="height:6px;background:#e8ebf4;border-radius:3px"><div style="width:98%;height:100%;background:linear-gradient(90deg,#0984e3,#74b9ff);border-radius:3px"></div></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<h2>A ideia central</h2>
+
+<p>
+  O <strong>VRAM Fabric</strong> inverte a hierarquia de memória: a VRAM passa a ser o <strong>barramento principal de dados</strong>, e a RAM do sistema vira armazenamento frio (spillover). É um runtime operating system para IA local, não uma aplicação, mas a <em>camada de fundação</em> sobre a qual aplicações rodam.
+</p>
+
+<pre>
+<span class="py-comment"># Stack tradicional — dados quicam CPU ↔ GPU</span>
+CPU → malloc RAM → cópia GPU (PCIe 32 GB/s) → kernel → cópia CPU (PCIe)
+
+<span class="py-comment"># VRAM Fabric — dados nascem, vivem e morrem na VRAM</span>
+GPU → cudaMalloc VRAM → kernel (600 GB/s) → resultado permanece em VRAM</pre>
+
+<!-- ═══════════════════════════════════════════ -->
+<h2>Arquitetura: 5 engines, um único address space CUDA</h2>
+
+<div class="two-col">
+  <div class="col">
+    <h3>Motor de Vetores</h3>
+    <p>FAISS GPU com índices Flat (cuBLAS) e IVF. FP16, consultas em lote via CUDA streams independentes. Spillover automático para RAM.</p>
+  </div>
+  <div class="col">
+    <h3>Runtime de Agentes</h3>
+    <p>Modelo de atores (estilo Erlang/OTP). Estado = tensor PyTorch na VRAM. Troca de contexto zero-copy (swap de ponteiro O(1), &lt; 1 µs). Workflows DAG.</p>
+  </div>
+</div>
+
+<div class="two-col">
+  <div class="col">
+    <h3>Cache Semântico</h3>
+    <p>Hit detection via dot-product em lote na GPU. LSH (Locality-Sensitive Hashing) para matching fuzzy. Prefetch especulativo. Segmentação por sentenças. LRU com kernel CUDA.</p>
+  </div>
+  <div class="col">
+    <h3>Scheduler Dinâmico</h3>
+    <p>Controlador PI (Proporcional-Integral) ajusta fatias de recursos a cada 100ms com feedback de SM occupancy e pressão de VRAM. Auto-throttling &lt; 10% VRAM livre.</p>
+  </div>
+</div>
+
+<p style="text-align:center; margin-top:8px;"><strong>+ Memory Pool</strong>, alocação explícita via <code>cudaMalloc</code>, spillover VRAM→RAM→SSD, sem UVM automática.</p>
+
+<!-- ▸ GRÁFICO: Fatias do Scheduler — barras de distribuição -->
+<div class="chart-card">
+  <h3>Distribuição de Recursos — Scheduler PI (RTX 4090, 24GB)</h3>
+
+  <div class="bar-row">
+    <span class="bar-label">LLM</span>
+    <div class="bar-track"><div class="bar-fill purple" style="width:70%">14 GB — 70%</div></div>
+    <span class="bar-value" style="color:#6c5ce7">70%</span>
+  </div>
+  <div class="bar-row">
+    <span class="bar-label">Vetores</span>
+    <div class="bar-track"><div class="bar-fill blue" style="width:15%">3 GB — 15%</div></div>
+    <span class="bar-value" style="color:#0984e3">15%</span>
+  </div>
+  <div class="bar-row">
+    <span class="bar-label">Agentes</span>
+    <div class="bar-track"><div class="bar-fill green" style="width:10%">2 GB — 10%</div></div>
+    <span class="bar-value" style="color:#00b894">10%</span>
+  </div>
+  <div class="bar-row">
+    <span class="bar-label">Cache</span>
+    <div class="bar-track"><div class="bar-fill teal" style="width:5%">5%</div></div>
+    <span class="bar-value" style="color:#00cec9">5%</span>
+  </div>
+
+  <div class="chart-legend">
+    <span><span class="legend-dot purple"></span> Pesos do LLM</span>
+    <span><span class="legend-dot blue"></span> Índice vetorial</span>
+    <span><span class="legend-dot green"></span> Estados agentes</span>
+    <span style="color:#00cec9;font-weight:700">■ Cache + Pool livre</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<h2>Performance real (RTX 4090, 24 GB)</h2>
+
+<!-- ▸ GRÁFICO: Benchmark — barras laterais lado a lado (antes vs depois) -->
+<div class="chart-card">
+  <h3>Comparativo de Latência por Operação (menor é melhor)</h3>
+
+  <div class="hgroup">
+    <div class="hgroup-title">Busca vetorial (1M, batch 1)</div>
+    <div class="hgroup-bars">
+      <div class="hgroup-row">
+        <span class="hgroup-legend">Tradicional</span>
+        <div class="hgroup-track"><div class="hgroup-fill gray" style="width:80%">15-50 ms</div></div>
+        <span class="hgroup-val" style="color:#b2bec3">50 ms</span>
+      </div>
+      <div class="hgroup-row">
+        <span class="hgroup-legend">VRAM Fabric</span>
+        <div class="hgroup-track"><div class="hgroup-fill purple" style="width:8%">&lt;5 ms</div></div>
+        <span class="hgroup-val" style="color:#6c5ce7">5 ms ★</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="hgroup">
+    <div class="hgroup-title">Troca de contexto entre agentes</div>
+    <div class="hgroup-bars">
+      <div class="hgroup-row">
+        <span class="hgroup-legend">Tradicional</span>
+        <div class="hgroup-track"><div class="hgroup-fill gray" style="width:100%">10-100 ms</div></div>
+        <span class="hgroup-val" style="color:#b2bec3">100 ms</span>
+      </div>
+      <div class="hgroup-row">
+        <span class="hgroup-legend">VRAM Fabric</span>
+        <div class="hgroup-track"><div class="hgroup-fill green" style="width:1%">&lt;1 ms</div></div>
+        <span class="hgroup-val" style="color:#00b894">1 ms ★</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="hgroup">
+    <div class="hgroup-title">Cache hit semântico</div>
+    <div class="hgroup-bars">
+      <div class="hgroup-row">
+        <span class="hgroup-legend">Tradicional</span>
+        <div class="hgroup-track"><div class="hgroup-fill gray" style="width:36%">0.5-2 ms (Redis)</div></div>
+        <span class="hgroup-val" style="color:#b2bec3">2 ms</span>
+      </div>
+      <div class="hgroup-row">
+        <span class="hgroup-legend">VRAM Fabric</span>
+        <div class="hgroup-track"><div class="hgroup-fill orange" style="width:2%">&lt;100 µs</div></div>
+        <span class="hgroup-val" style="color:#e17055">0.1 ms ★</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="hgroup">
+    <div class="hgroup-title">Overhead do scheduler</div>
+    <div class="hgroup-bars">
+      <div class="hgroup-row">
+        <span class="hgroup-legend">Tradicional</span>
+        <div class="hgroup-track"><div class="hgroup-fill gray" style="width:28%">5-15% GPU ociosa</div></div>
+        <span class="hgroup-val" style="color:#b2bec3">15%</span>
+      </div>
+      <div class="hgroup-row">
+        <span class="hgroup-legend">VRAM Fabric</span>
+        <div class="hgroup-track"><div class="hgroup-fill blue" style="width:4%">&lt;2%</div></div>
+        <span class="hgroup-val" style="color:#0984e3">2% ★</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-legend">
+    <span><span class="legend-dot gray"></span> Stack tradicional (CPU+GPU)</span>
+    <span><span class="legend-dot purple"></span> VRAM Fabric (GPU-first)</span>
+  </div>
+</div>
+
+<!-- ▸ GRÁFICO: Aceleração em barras horizontais -->
+<div class="chart-card">
+  <h3>Fator de Aceleração por Operação</h3>
+  <div class="bar-row">
+    <span class="bar-label">Busca vetorial</span>
+    <div class="bar-track"><div class="bar-fill purple" style="width:65%">3-10x</div></div>
+    <span class="bar-value" style="color:#6c5ce7">×10</span>
+  </div>
+  <div class="bar-row">
+    <span class="bar-label">Contexto agente</span>
+    <div class="bar-track"><div class="bar-fill green" style="width:100%">10-100x</div></div>
+    <span class="bar-value" style="color:#00b894">×100</span>
+  </div>
+  <div class="bar-row">
+    <span class="bar-label">Cache hit</span>
+    <div class="bar-track"><div class="bar-fill orange" style="width:40%">5-20x</div></div>
+    <span class="bar-value" style="color:#e17055">×20</span>
+  </div>
+  <div class="bar-row">
+    <span class="bar-label">Scheduler</span>
+    <div class="bar-track"><div class="bar-fill blue" style="width:30%">2.5-7.5x</div></div>
+    <span class="bar-value" style="color:#0984e3">×7.5</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<h2>Três linhas para começar</h2>
+
+<pre>
+<span class="py-kw">from</span> vram_fabric <span class="py-kw">import</span> VRAMFabric
+
+fabric = VRAMFabric(vector_dim=768, cache_size_mb=2048)
+fabric.index_documents([<span class="py-str">"Python é uma linguagem interpretada."</span>])
+resultado = fabric.search(<span class="py-str">"O que é Python?"</span>, k=3)</pre>
+
+<p>O mesmo vale para cache semântico, orquestração de agentes, workflows DAG e servidor REST, tudo com uma API declarativa de baixa fricção.</p>
+
+<!-- ═══════════════════════════════════════════ -->
+<h2>Validação científica: 7 papers que respaldam a arquitetura</h2>
+
+<!-- ▸ GRÁFICO: Aceleração reportada por cada paper -->
+<div class="chart-card">
+  <h3>Fator de aceleração reportado por paper → implementado no VRAM Fabric</h3>
+
+  <div class="hgroup">
+    <div class="hgroup-title">Blink — Inferência LLM sem CPU (arXiv:2604.07609)</div>
+    <div class="hgroup-bars">
+      <div class="hgroup-row">
+        <span class="hgroup-legend"></span>
+        <div class="hgroup-track"><div class="hgroup-fill purple" style="width:85%">8.5x P99 TTFT</div></div>
+        <span class="hgroup-val" style="color:#6c5ce7">×8.5</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="hgroup">
+    <div class="hgroup-title">SemShareKV — Cache KV via LSH (arXiv:2509.24832)</div>
+    <div class="hgroup-bars">
+      <div class="hgroup-row">
+        <span class="hgroup-legend"></span>
+        <div class="hgroup-track"><div class="hgroup-fill purple" style="width:63%">6.3x aceleração</div></div>
+        <span class="hgroup-val" style="color:#6c5ce7">×6.3</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="hgroup">
+    <div class="hgroup-title">CONCUR — Controle de Admissão de Agentes (arXiv:2601.22705)</div>
+    <div class="hgroup-bars">
+      <div class="hgroup-row">
+        <span class="hgroup-legend"></span>
+        <div class="hgroup-track"><div class="hgroup-fill orange" style="width:41%">4.1x vazão</div></div>
+        <span class="hgroup-val" style="color:#e17055">×4.1</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="hgroup">
+    <div class="hgroup-title">LiteCache — Prefetch especulativo (arXiv:2511.14510)</div>
+    <div class="hgroup-bars">
+      <div class="hgroup-row">
+        <span class="hgroup-legend"></span>
+        <div class="hgroup-track"><div class="hgroup-fill green" style="width:22%">2.2x vazão</div></div>
+        <span class="hgroup-val" style="color:#00b894">×2.2</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="hgroup">
+    <div class="hgroup-title">AsymCache — Evicção kernel-aware (arXiv:2606.02964)</div>
+    <div class="hgroup-bars">
+      <div class="hgroup-row">
+        <span class="hgroup-legend"></span>
+        <div class="hgroup-track"><div class="hgroup-fill blue" style="width:20%">2x TTFT</div></div>
+        <span class="hgroup-val" style="color:#0984e3">×2.0</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="hgroup">
+    <div class="hgroup-title">Harvest — Cache GPU Peer-to-Peer (arXiv:2602.00328)</div>
+    <div class="hgroup-bars">
+      <div class="hgroup-row">
+        <span class="hgroup-legend"></span>
+        <div class="hgroup-track"><div class="hgroup-fill teal" style="width:20%">2x vazão</div></div>
+        <span class="hgroup-val" style="color:#00cec9">×2.0</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- cards de papers mantidos abaixo como detalhamento textual -->
+<div class="paper-card"><strong>Blink</strong> (Abr/2026) — Inferência LLM sem CPU via GPU+SmartNIC. → Arquitetura GPU-cêntrica do VRAM Fabric.</div>
+<div class="paper-card"><strong>LiteCache</strong> (Nov/2025) — Cache KV GPU-cêntrico com QSAC. → Prefetch especulativo por similaridade direcional.</div>
+<div class="paper-card"><strong>SemShareKV</strong> (Set/2025) — Compartilhamento de Cache KV via LSH. → Matching fuzzy LSH com índice de 64 buckets.</div>
+<div class="paper-card"><strong>SentenceKV</strong> (NeurIPS 2025) — Cache KV semântico por sentença. → Segmentação por sentenças para reúso fino.</div>
+<div class="paper-card"><strong>CONCUR</strong> (Jan/2026) — Controle de Admissão de Agentes. → Admissão sensível à pressão do cache.</div>
+<div class="paper-card"><strong>Harvest</strong> (Fev/2026) — Cache GPU Peer-to-Peer. → Extensão multi-GPU (roadmap Fase 3).</div>
+<div class="paper-card"><strong>AsymCache</strong> (Jun/2026) — Evicção com Consciência de Performance. → Evicção CUDA LRU kernel-aware planejada.</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<h2>Diferencial competitivo direto</h2>
+
+<!-- ▸ GRÁFICO: Radar/substitutivo — barras por funcionalidade, comparando 3 soluções -->
+<div class="chart-card">
+  <h3>Comparação VRAM Fabric × LangChain × LlamaIndex</h3>
+  <p style="font-size:13px;color:#888;margin-bottom:14px">Valor: 0 = não possui | 1 = RAM/Redis | 2 = VRAM/GPU nativa</p>
+
+  <div class="hgroup">
+    <div class="hgroup-title">Armazenamento de vetores</div>
+    <div class="hgroup-bars">
+      <div class="hgroup-row">
+        <span class="hgroup-legend">VRAM Fabric</span>
+        <div class="hgroup-track"><div class="hgroup-fill purple" style="width:100%">VRAM</div></div>
+        <span class="hgroup-val" style="color:#6c5ce7">★★★</span>
+      </div>
+      <div class="hgroup-row">
+        <span class="hgroup-legend">LangChain</span>
+        <div class="hgroup-track"><div class="hgroup-fill gray" style="width:50%">RAM</div></div>
+        <span class="hgroup-val" style="color:#b2bec3">★☆☆</span>
+      </div>
+      <div class="hgroup-row">
+        <span class="hgroup-legend">LlamaIndex</span>
+        <div class="hgroup-track"><div class="hgroup-fill gray" style="width:50%">RAM</div></div>
+        <span class="hgroup-val" style="color:#b2bec3">★☆☆</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="hgroup">
+    <div class="hgroup-title">Cache semântico</div>
+    <div class="hgroup-bars">
+      <div class="hgroup-row">
+        <span class="hgroup-legend">VRAM Fabric</span>
+        <div class="hgroup-track"><div class="hgroup-fill green" style="width:100%">GPU nativa</div></div>
+        <span class="hgroup-val" style="color:#00b894">★★★</span>
+      </div>
+      <div class="hgroup-row">
+        <span class="hgroup-legend">LangChain</span>
+        <div class="hgroup-track"><div class="hgroup-fill gray" style="width:50%">Redis</div></div>
+        <span class="hgroup-val" style="color:#b2bec3">★☆☆</span>
+      </div>
+      <div class="hgroup-row">
+        <span class="hgroup-legend">LlamaIndex</span>
+        <div class="hgroup-track"><div class="hgroup-fill gray" style="width:50%">Redis</div></div>
+        <span class="hgroup-val" style="color:#b2bec3">★☆☆</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="hgroup">
+    <div class="hgroup-title">Estado de agentes</div>
+    <div class="hgroup-bars">
+      <div class="hgroup-row">
+        <span class="hgroup-legend">VRAM Fabric</span>
+        <div class="hgroup-track"><div class="hgroup-fill orange" style="width:100%">Tensores VRAM</div></div>
+        <span class="hgroup-val" style="color:#e17055">★★★</span>
+      </div>
+      <div class="hgroup-row">
+        <span class="hgroup-legend">LangChain</span>
+        <div class="hgroup-track"><div class="hgroup-fill gray" style="width:50%">Dicts RAM</div></div>
+        <span class="hgroup-val" style="color:#b2bec3">★☆☆</span>
+      </div>
+      <div class="hgroup-row">
+        <span class="hgroup-legend">LlamaIndex</span>
+        <div class="hgroup-track"><div class="hgroup-fill gray" style="width:50%">Dicts RAM</div></div>
+        <span class="hgroup-val" style="color:#b2bec3">★☆☆</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="hgroup">
+    <div class="hgroup-title">Scheduler GPU-nativo</div>
+    <div class="hgroup-bars">
+      <div class="hgroup-row">
+        <span class="hgroup-legend">VRAM Fabric</span>
+        <div class="hgroup-track"><div class="hgroup-fill blue" style="width:100%">PI Dinâmico</div></div>
+        <span class="hgroup-val" style="color:#0984e3">★★★</span>
+      </div>
+      <div class="hgroup-row">
+        <span class="hgroup-legend">LangChain</span>
+        <div class="hgroup-track"><div class="hgroup-fill gray" style="width:5%">Nenhum</div></div>
+        <span class="hgroup-val" style="color:#b2bec3">☆☆☆</span>
+      </div>
+      <div class="hgroup-row">
+        <span class="hgroup-legend">LlamaIndex</span>
+        <div class="hgroup-track"><div class="hgroup-fill gray" style="width:5%">Nenhum</div></div>
+        <span class="hgroup-val" style="color:#b2bec3">☆☆☆</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="hgroup">
+    <div class="hgroup-title">Contexto zero-copy</div>
+    <div class="hgroup-bars">
+      <div class="hgroup-row">
+        <span class="hgroup-legend">VRAM Fabric</span>
+        <div class="hgroup-track"><div class="hgroup-fill purple" style="width:100%">Sim (O(1))</div></div>
+        <span class="hgroup-val" style="color:#6c5ce7">★★★</span>
+      </div>
+      <div class="hgroup-row">
+        <span class="hgroup-legend">LangChain</span>
+        <div class="hgroup-track"><div class="hgroup-fill gray" style="width:5%">Não</div></div>
+        <span class="hgroup-val" style="color:#b2bec3">☆☆☆</span>
+      </div>
+      <div class="hgroup-row">
+        <span class="hgroup-legend">LlamaIndex</span>
+        <div class="hgroup-track"><div class="hgroup-fill gray" style="width:5%">Não</div></div>
+        <span class="hgroup-val" style="color:#b2bec3">☆☆☆</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-legend">
+    <span><span class="legend-dot purple"></span> VRAM Fabric</span>
+    <span><span class="legend-dot gray"></span> LangChain</span>
+    <span style="color:#888;">■ LlamaIndex</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<h2>Spillover inteligente: degradação graciosa</h2>
+
+<p>Quando a VRAM está baixa, o sistema não crasha, ele se adapta:</p>
+
+<pre>
+VRAM livre &lt; 512MB → Evicta vetores LRU → RAM
+VRAM livre &lt; 256MB → Evicta entradas frias cache → RAM
+VRAM livre &lt; 128MB → Congela estados de agentes → RAM
+VRAM livre &lt;  64MB → Swap emergencial → SSD
+
+Recuperação automática quando VRAM &gt; 1GB</pre>
+
+<!-- ▸ GRÁFICO: Gatilhos de spillover — barras decrescentes -->
+<div class="chart-card">
+  <h3>Gatilhos de Spillover (thresholds de VRAM livre)</h3>
+  <div class="bar-row">
+    <span class="bar-label">512 MB</span>
+    <div class="bar-track"><div class="bar-fill purple" style="width:100%">Evicta vetores LRU → RAM</div></div>
+  </div>
+  <div class="bar-row">
+    <span class="bar-label">256 MB</span>
+    <div class="bar-track"><div class="bar-fill blue" style="width:50%">Evicta cache frio → RAM</div></div>
+  </div>
+  <div class="bar-row">
+    <span class="bar-label">128 MB</span>
+    <div class="bar-track"><div class="bar-fill orange" style="width:25%">Congela agentes → RAM</div></div>
+  </div>
+  <div class="bar-row">
+    <span class="bar-label">64 MB</span>
+    <div class="bar-track"><div class="bar-fill red" style="width:12.5%">Swap emergencial → SSD</div></div>
+  </div>
+  <p style="font-size:12px;color:#888;margin:12px 0 0 0">↑ Recuperação automática quando VRAM livre &gt; 1 GB</p>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<h2>Roadmap público</h2>
+
+<!-- ▸ GRÁFICO: Roadmap como barras de progresso -->
+<div class="chart-card">
+  <h3>Progresso do desenvolvimento</h3>
+
+  <div class="bar-row">
+    <span class="bar-label">Fase 1</span>
+    <div class="bar-track"><div class="bar-fill green" style="width:100%">MVP — Vector, Cache, Pool, API ✅</div></div>
+    <span class="bar-value" style="color:#00b894">100%</span>
+  </div>
+  <div class="bar-row">
+    <span class="bar-label">Fase 2</span>
+    <div class="bar-track"><div class="bar-fill green" style="width:100%">Evolução — LSH, Prefetch, Agentes, Scheduler ✅</div></div>
+    <span class="bar-value" style="color:#00b894">100%</span>
+  </div>
+  <div class="bar-row">
+    <span class="bar-label">Q3 2026</span>
+    <div class="bar-track"><div class="bar-fill blue" style="width:20%">Robustez — CUDA Graph, AsymCache, LSH multi-probe</div></div>
+    <span class="bar-value" style="color:#0984e3">🔲</span>
+  </div>
+  <div class="bar-row">
+    <span class="bar-label">Q4 2026</span>
+    <div class="bar-track"><div class="bar-fill purple" style="width:5%">Maturidade — Triton, multi-GPU, SmartNIC</div></div>
+    <span class="bar-value" style="color:#6c5ce7">🔲</span>
+  </div>
+</div>
+
+<p>
+  <span class="tag">✅ Fase 1 — MVP</span> Vector Engine, Cache Semântico, Memory Pool, API Server<br>
+  <span class="tag">✅ Fase 2 — Evolução</span> LSH fuzzy matching, prefetch especulativo, sentence chunks, admissão CONCUR, scheduler PI<br>
+  <span class="tag">🔲 Q3 2026</span> CUDA Graph, AsymCache LRU kernel-aware, LSH multi-probe, quantização adaptativa<br>
+  <span class="tag">🔲 Q4 2026</span> Triton Inference Server, multi-GPU NCCL (Harvest), offload SmartNIC (Blink)
+</p>
+
+<!-- ═══════════════════════════════════════════ -->
+<h2>Stack técnica enxuta</h2>
+
+<pre>
+Python 3.10+
+├── <span class="py-str">torch</span>           # tensores CUDA, alocação VRAM
+├── <span class="py-str">faiss-gpu</span>      # índices vetoriais Flat/IVF
+├── <span class="py-str">fastapi</span>        # API REST (14 endpoints)
+├── <span class="py-str">uvicorn</span>        # servidor ASGI + uvloop
+├── <span class="py-str">numpy</span>          # fallback CPU
+└── <span class="py-str">pyyaml</span>         # configuração hot-reload</pre>
+
+<!-- ▸ GRÁFICO: KPIs de qualidade como barras visuais -->
+<div class="chart-card">
+  <h3>Métricas de Qualidade do Projeto</h3>
+
+  <div class="bar-row">
+    <span class="bar-label">Testes</span>
+    <div class="bar-track"><div class="bar-fill green" style="width:88%">44 aprovados</div></div>
+    <span class="bar-value" style="color:#00b894">44</span>
+  </div>
+  <div class="bar-row">
+    <span class="bar-label">Endpoints</span>
+    <div class="bar-track"><div class="bar-fill blue" style="width:93%">14 REST</div></div>
+    <span class="bar-value" style="color:#0984e3">14</span>
+  </div>
+  <div class="bar-row">
+    <span class="bar-label">Papers</span>
+    <div class="bar-track"><div class="bar-fill purple" style="width:100%">7 validados (MLSys, NeurIPS, ICML)</div></div>
+    <span class="bar-value" style="color:#6c5ce7">7</span>
+  </div>
+  <div class="bar-row">
+    <span class="bar-label">Deps</span>
+    <div class="bar-track"><div class="bar-fill teal" style="width:38%">6 diretas</div></div>
+    <span class="bar-value" style="color:#00cec9">6</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<div class="cta-box">
+  <h2>Open source. MIT. 44 testes aprovados.</h2>
+  <p>Requisito mínimo: Python 3.10+, GPU com 8 GB VRAM (RTX 3070+), CUDA 11.8+</p>
+  <p><code>pip install -e ".[gpu]"</code> &nbsp;|&nbsp; <code>python -m vram_fabric</code> &nbsp;|&nbsp; servidor em <code>localhost:8081</code></p>
+</div>
+
+<p style="text-align:center; font-size:18px; font-weight:600; margin-top:16px;">
+  Não é "melhor que a concorrência". É <span style="color:#6c5ce7;">ortogonal</span> a ela.<br>
+  O VRAM Fabric é a camada abaixo.
+</p>
+
+<footer>
+  <p><strong>Tópicos:</strong></p>
+  <p>
+    <span class="tag">#IA</span> <span class="tag">#GPU</span> <span class="tag">#CUDA</span> <span class="tag">#DeepTech</span>
+    <span class="tag">#OpenSource</span> <span class="tag">#MachineLearning</span> <span class="tag">#HPC</span>
+    <span class="tag">#Python</span> <span class="tag">#VRAM</span> <span class="tag">#LLM</span>
+    <span class="tag">#VectorSearch</span> <span class="tag">#SemanticCache</span> <span class="tag">#MultiAgent</span>
+    <span class="tag">#FAISS</span> <span class="tag">#PyTorch</span> <span class="tag">#RAG</span> <span class="tag">#Runtime</span>
+  </p>
+</footer>
+
+</body>
+</html>

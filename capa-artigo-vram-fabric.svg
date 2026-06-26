@@ -1,0 +1,229 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <!-- Background gradients -->
+    <radialGradient id="bgGlow" cx="0.3" cy="0.3" r="0.8">
+      <stop offset="0%" stop-color="#1a0a3e"/>
+      <stop offset="40%" stop-color="#0d0d2b"/>
+      <stop offset="100%" stop-color="#050515"/>
+    </radialGradient>
+    <radialGradient id="pinkGlow" cx="0.75" cy="0.2" r="0.5">
+      <stop offset="0%" stop-color="#ff6b9d" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#ff6b9d" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="purpleGlow" cx="0.15" cy="0.7" r="0.6">
+      <stop offset="0%" stop-color="#7c3aed" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#7c3aed" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="cyanGlow" cx="0.5" cy="0.5" r="0.4">
+      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#06b6d4" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- VRAM bar gradient -->
+    <linearGradient id="vramGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#7c3aed"/>
+      <stop offset="40%" stop-color="#a78bfa"/>
+      <stop offset="100%" stop-color="#c4b5fd"/>
+    </linearGradient>
+
+    <!-- PCIe bar gradient -->
+    <linearGradient id="pcieGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#4b5563"/>
+      <stop offset="100%" stop-color="#9ca3af"/>
+    </linearGradient>
+
+    <!-- Accent gradients -->
+    <linearGradient id="grad1" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#f97316"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+    <linearGradient id="grad2" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#06b6d4"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <linearGradient id="grad3" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+    <linearGradient id="grad4" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#f43f5e"/>
+      <stop offset="100%" stop-color="#f97316"/>
+    </linearGradient>
+    <linearGradient id="grad5" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#8b5cf6"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+
+    <!-- Title gradient -->
+    <linearGradient id="titleGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#c4b5fd"/>
+      <stop offset="30%" stop-color="#ffffff"/>
+      <stop offset="70%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#a5f3fc"/>
+    </linearGradient>
+
+    <!-- Glow filters -->
+    <filter id="glow1" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="12" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+    <filter id="glow2" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#7c3aed" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bgGlow)"/>
+
+  <!-- Glow orbs -->
+  <ellipse cx="900" cy="120" rx="350" ry="250" fill="url(#pinkGlow)"/>
+  <ellipse cx="180" cy="420" rx="400" ry="280" fill="url(#purpleGlow)"/>
+  <ellipse cx="600" cy="300" rx="500" ry="300" fill="url(#cyanGlow)"/>
+
+  <!-- Subtle grid -->
+  <g opacity="0.03" stroke="#a78bfa" stroke-width="0.5">
+    <line x1="0" y1="105" x2="1200" y2="105"/><line x1="0" y1="210" x2="1200" y2="210"/>
+    <line x1="0" y1="315" x2="1200" y2="315"/><line x1="0" y1="420" x2="1200" y2="420"/>
+    <line x1="0" y1="525" x2="1200" y2="525"/>
+    <line x1="200" y1="0" x2="200" y2="630"/><line x1="400" y1="0" x2="400" y2="630"/>
+    <line x1="600" y1="0" x2="600" y2="630"/><line x1="800" y1="0" x2="800" y2="630"/>
+    <line x1="1000" y1="0" x2="1000" y2="630"/>
+  </g>
+
+  <!-- ============================================ -->
+  <!-- MAIN VISUAL: VRAM vs PCIe Bar Chart -->
+  <!-- ============================================ -->
+
+  <!-- VRAM Bar (massive, dominant) -->
+  <g filter="url(#shadow)">
+    <!-- VRAM bar background -->
+    <rect x="100" y="95" width="520" height="260" rx="20" fill="#1e1040" opacity="0.6"/>
+    <rect x="100" y="95" width="520" height="260" rx="20" fill="none" stroke="#7c3aed" stroke-width="1.5" opacity="0.3"/>
+
+    <!-- Header row -->
+    <rect x="100" y="95" width="520" height="50" rx="20" fill="#7c3aed" opacity="0.1"/>
+    <text x="360" y="127" text-anchor="middle" font-family="'Inter',sans-serif" font-size="17" font-weight="700" fill="#c4b5fd" letter-spacing="1">GPU VRAM — GDDR6X</text>
+
+    <!-- Main bar -->
+    <rect x="130" y="170" width="460" height="52" rx="10" fill="#0d0d2b"/>
+    <rect x="130" y="170" width="460" height="52" rx="10" fill="url(#vramGrad)"/>
+    <text x="150" y="201" font-family="'Inter',sans-serif" font-size="18" font-weight="800" fill="#fff">600 – 1000 GB/s</text>
+
+    <!-- Bar stats inside VRAM -->
+    <rect x="130" y="240" width="160" height="36" rx="8" fill="#7c3aed" opacity="0.15"/>
+    <text x="210" y="262" text-anchor="middle" font-family="'Inter',sans-serif" font-size="12" font-weight="600" fill="#a78bfa">&lt;5 μs latência</text>
+
+    <rect x="305" y="240" width="160" height="36" rx="8" fill="#06b6d4" opacity="0.12"/>
+    <text x="385" y="262" text-anchor="middle" font-family="'Inter',sans-serif" font-size="12" font-weight="600" fill="#67e8f9">Vetores FAISS</text>
+
+    <rect x="130" y="288" width="160" height="36" rx="8" fill="#10b981" opacity="0.12"/>
+    <text x="210" y="310" text-anchor="middle" font-family="'Inter',sans-serif" font-size="12" font-weight="600" fill="#6ee7b7">Cache CUDA LRU</text>
+
+    <rect x="305" y="288" width="160" height="36" rx="8" fill="#f97316" opacity="0.12"/>
+    <text x="385" y="310" text-anchor="middle" font-family="'Inter',sans-serif" font-size="12" font-weight="600" fill="#fdba74">Agentes Zero-Copy</text>
+  </g>
+
+  <!-- PCIe Bar (thin, undersized, on the right) -->
+  <g>
+    <rect x="680" y="155" width="200" height="130" rx="14" fill="#374151" opacity="0.25"/>
+    <rect x="680" y="155" width="200" height="130" rx="14" fill="none" stroke="#6b7280" stroke-width="1" opacity="0.3"/>
+
+    <text x="780" y="188" text-anchor="middle" font-family="'Inter',sans-serif" font-size="14" font-weight="700" fill="#9ca3af" letter-spacing="1">PCIe 4.0 x16</text>
+
+    <!-- Thin bar -->
+    <rect x="710" y="210" width="140" height="22" rx="6" fill="#1f2937"/>
+    <rect x="710" y="210" width="7" height="22" rx="6" fill="url(#pcieGrad)"/>
+    <text x="730" y="225" font-family="'Inter',sans-serif" font-size="10" font-weight="600" fill="#9ca3af">~32 GB/s</text>
+
+    <!-- Stats -->
+    <text x="780" y="262" text-anchor="middle" font-family="'Inter',sans-serif" font-size="10" fill="#6b7280">50–200 μs latência</text>
+    <text x="780" y="278" text-anchor="middle" font-family="'Inter',sans-serif" font-size="10" fill="#6b7280">RAM + Redis</text>
+  </g>
+
+  <!-- ═══ 18-30x badge (dynamic, standout) ═══ -->
+  <g filter="url(#glow1)">
+    <!-- Pulsing circle -->
+    <circle cx="670" cy="220" r="48" fill="url(#grad1)" opacity="0.18"/>
+    <circle cx="670" cy="220" r="38" fill="url(#grad1)" opacity="0.25"/>
+    <circle cx="670" cy="220" r="38" fill="none" stroke="url(#grad1)" stroke-width="2" opacity="0.6"/>
+    <text x="670" y="213" text-anchor="middle" font-family="'Inter',sans-serif" font-size="22" font-weight="900" fill="#fff">18-30×</text>
+    <text x="670" y="236" text-anchor="middle" font-family="'Inter',sans-serif" font-size="9" font-weight="600" fill="#fdba74" letter-spacing="1">MAIS RÁPIDO</text>
+  </g>
+
+  <!-- Arrow pointing to PCIe -->
+  <line x1="625" y1="220" x2="675" y2="220" stroke="#f97316" stroke-width="1.5" opacity="0.4" stroke-dasharray="4,3"/>
+
+  <!-- ============================================ -->
+  <!-- 4 Key Metric Bars (bottom left) -->
+  <!-- ============================================ -->
+  <g transform="translate(100, 390)">
+    <!-- Card 1 - Latência -->
+    <rect x="0" y="0" width="112" height="80" rx="12" fill="#1e1040" opacity="0.5"/>
+    <rect x="0" y="0" width="112" height="80" rx="12" fill="none" stroke="#a78bfa" stroke-width="0.8" opacity="0.2"/>
+    <text x="56" y="26" text-anchor="middle" font-family="'Inter',sans-serif" font-size="20" font-weight="800" fill="#c4b5fd">10-40×</text>
+    <rect x="14" y="36" width="84" height="6" rx="3" fill="#1e1040"/><rect x="14" y="36" width="80" height="6" rx="3" fill="url(#vramGrad)"/>
+    <text x="56" y="62" text-anchor="middle" font-family="'Inter',sans-serif" font-size="10" font-weight="600" fill="#8b5cf6">MENOS LATÊNCIA</text>
+
+    <!-- Card 2 - Energia -->
+    <rect x="128" y="0" width="112" height="80" rx="12" fill="#1e1040" opacity="0.5"/>
+    <rect x="128" y="0" width="112" height="80" rx="12" fill="none" stroke="#06b6d4" stroke-width="0.8" opacity="0.2"/>
+    <text x="184" y="26" text-anchor="middle" font-family="'Inter',sans-serif" font-size="20" font-weight="800" fill="#67e8f9">10×</text>
+    <rect x="142" y="36" width="84" height="6" rx="3" fill="#1e1040"/><rect x="142" y="36" width="42" height="6" rx="3" fill="url(#grad3)"/>
+    <text x="184" y="62" text-anchor="middle" font-family="'Inter',sans-serif" font-size="10" font-weight="600" fill="#06b6d4">MENOS ENERGIA</text>
+
+    <!-- Card 3 - Cache -->
+    <rect x="256" y="0" width="112" height="80" rx="12" fill="#1e1040" opacity="0.5"/>
+    <rect x="256" y="0" width="112" height="80" rx="12" fill="none" stroke="#f97316" stroke-width="0.8" opacity="0.2"/>
+    <text x="312" y="26" text-anchor="middle" font-family="'Inter',sans-serif" font-size="20" font-weight="800" fill="#fdba74">5-20×</text>
+    <rect x="270" y="36" width="84" height="6" rx="3" fill="#1e1040"/><rect x="270" y="36" width="60" height="6" rx="3" fill="url(#grad4)"/>
+    <text x="312" y="62" text-anchor="middle" font-family="'Inter',sans-serif" font-size="10" font-weight="600" fill="#f97316">CACHE HIT</text>
+
+    <!-- Card 4 - Overhead -->
+    <rect x="384" y="0" width="112" height="80" rx="12" fill="#1e1040" opacity="0.5"/>
+    <rect x="384" y="0" width="112" height="80" rx="12" fill="none" stroke="#10b981" stroke-width="0.8" opacity="0.2"/>
+    <text x="440" y="26" text-anchor="middle" font-family="'Inter',sans-serif" font-size="20" font-weight="800" fill="#6ee7b7">&lt;2%</text>
+    <rect x="398" y="36" width="84" height="6" rx="3" fill="#1e1040"/><rect x="398" y="36" width="82" height="6" rx="3" fill="url(#grad3)"/>
+    <text x="440" y="62" text-anchor="middle" font-family="'Inter',sans-serif" font-size="10" font-weight="600" fill="#10b981">OVERHEAD SCHEDULER</text>
+  </g>
+
+  <!-- ============================================ -->
+  <!-- Title + Subtitle (bottom) -->
+  <!-- ============================================ -->
+  <g>
+    <!-- Title background glow -->
+    <text x="780" y="540" text-anchor="middle" font-family="'Inter',sans-serif" font-size="44" font-weight="900" fill="url(#titleGrad)" letter-spacing="-2">VRAM Fabric</text>
+    <text x="780" y="580" text-anchor="middle" font-family="'Inter',sans-serif" font-size="15" font-weight="500" fill="#a78bfa" letter-spacing="2">RUNTIME DEEP TECH PARA IA LOCAL</text>
+
+    <!-- Bottom line -->
+    <rect x="540" y="597" width="480" height="2" rx="1" fill="url(#grad5)" opacity="0.5"/>
+  </g>
+
+  <!-- ============================================ -->
+  <!-- Top-right labels -->
+  <!-- ============================================ -->
+  <g transform="translate(920, 100)">
+    <rect x="0" y="0" width="170" height="30" rx="15" fill="url(#grad2)" opacity="0.15"/>
+    <text x="85" y="20" text-anchor="middle" font-family="'Inter',sans-serif" font-size="11" font-weight="700" fill="#a5f3fc" letter-spacing="2">🚀 OPEN SOURCE MIT</text>
+  </g>
+
+  <g transform="translate(920, 142)">
+    <rect x="0" y="0" width="170" height="30" rx="15" fill="url(#grad1)" opacity="0.12"/>
+    <text x="85" y="20" text-anchor="middle" font-family="'Inter',sans-serif" font-size="11" font-weight="700" fill="#fdba74" letter-spacing="2">⚡ CUDA 12.x</text>
+  </g>
+
+  <g transform="translate(920, 184)">
+    <rect x="0" y="0" width="170" height="30" rx="15" fill="url(#grad3)" opacity="0.12"/>
+    <text x="85" y="20" text-anchor="middle" font-family="'Inter',sans-serif" font-size="11" font-weight="700" fill="#6ee7b7" letter-spacing="2">🐍 PYTHON 3.10+</text>
+  </g>
+
+  <!-- Decorative dots -->
+  <circle cx="60" cy="60" r="2.5" fill="#c4b5fd" opacity="0.4"/>
+  <circle cx="90" cy="40" r="1.5" fill="#67e8f9" opacity="0.3"/>
+  <circle cx="1140" cy="60" r="2" fill="#fdba74" opacity="0.3"/>
+  <circle cx="1120" cy="80" r="1.5" fill="#6ee7b7" opacity="0.25"/>
+  <circle cx="600" cy="30" r="3" fill="#c4b5fd" opacity="0.15"/>
+</svg>

@@ -1,0 +1,35 @@
+[project]
+name = "vram-fabric"
+version = "1.0.0"
+description = "VRAM Fabric — Deep Tech Runtime for Local AI. Orquestração de IA diretamente na VRAM."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "HPC Systems Architect"}]
+
+dependencies = [
+    "numpy>=1.24.0",
+    "pyyaml>=6.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "pydantic>=2.8.0",
+]
+
+[project.optional-dependencies]
+gpu = [
+    "torch>=2.0.0",
+    "faiss-gpu>=1.7.0",
+]
+dev = [
+    "pytest>=8.2.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=5.0.0",
+]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
